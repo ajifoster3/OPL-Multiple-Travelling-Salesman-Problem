@@ -36,15 +36,7 @@ dvar int+ u[NonDepotCities];
 minimize maxDistance;
 
 subject to {
-    
-  // There should be no more than 1 path from the depot to any given city
-  forall (j in Cities)
-    sum (t in TeamMembers) pathUsed[t][t][j] <= 1;
-  
-  // Each depot should be left exactly once
-  forall (t in TeamMembers)
-    sum (ti in TeamMembers, j in Cities) pathUsed[ti][t][j] == 1;
-    
+
   // Each Team member must leave its own Depot
   forall (t in TeamMembers)
     sum (j in Cities) pathUsed[t][t][j] == 1;
@@ -61,21 +53,26 @@ subject to {
   forall (t in TeamMembers)
     sum (i in Cities, j in Cities) distance[i][j] * pathUsed[t][i][j] <= maxDistance;
   
-  // All non-depot Cities must be visited exactly once
+  // Cities must be visited exactly once
   forall (j in NonDepotCities)
     sum (t in TeamMembers, i in Cities) pathUsed[t][i][j] == 1;
   
-  // Should only be one destination per origin
-  forall (i in NonDepotCities)
-    sum (t in TeamMembers, j in NonDepotCities) pathUsed[t][i][j] <= 1; 
+  // If an agent enters a city, it must exit
+  forall (t in TeamMembers, j in NonDepotCities)
+    sum(i in Cities) pathUsed[t][i][j] == sum(i in Cities) pathUsed[t][j][i];
   
   // An agent shouldn't move to itself
   forall (t in TeamMembers, i in Cities)
     pathUsed[t][i][i] == 0;
-    
-  // If an agent enters a city, it must exit
-  forall (t in TeamMembers, j in NonDepotCities)
-    sum(i in Cities) pathUsed[t][i][j] == sum(i in Cities) pathUsed[t][j][i];
+  
+  // An agent should leave a city it enters
+  forall(t in TeamMembers, i in Cities,j in Cities)
+    if (i != j) {
+      sum(k in Cities : k != j)
+        // For an agent a path should be selected in row j 
+        // if the j-th element of any row is selected for that agent
+        pathUsed[t][j][k] >= pathUsed[t][i][j];
+    }
     
   // Subtour elimination constraints
   forall(t in TeamMembers)
